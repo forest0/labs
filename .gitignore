@@ -1,0 +1,10 @@
+*.tar
+*.bak
+*.swp
+
+.ycm_extra_conf.py
+
+csapp/datalab-handout/dlc
+csapp/datalab-handout/ishow
+csapp/datalab-handout/fshow
+csapp/datalab-handout/btest
