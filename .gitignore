@@ -8,3 +8,6 @@ csapp/datalab-handout/dlc
 csapp/datalab-handout/ishow
 csapp/datalab-handout/fshow
 csapp/datalab-handout/btest
+
+csapp/bomb/*
+!csapp/bomb/lab_record.md
