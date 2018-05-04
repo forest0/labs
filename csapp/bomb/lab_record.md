@@ -259,7 +259,7 @@ if (strings_not_equal(buffer, target_str)) {
 
 前边 5 个玩了一天, 这最后一个玩了一天...
 
-```objdump
+```
 00000000004010f4 <phase_6>:
   4010f4:   41 56                   push   %r14
   4010f6:   41 55                   push   %r13
@@ -347,7 +347,7 @@ if (strings_not_equal(buffer, target_str)) {
   4011fd:   41 5c                   pop    %r12
   4011ff:   41 5d                   pop    %r13
   401201:   41 5e                   pop    %r14
-  401203:   c3                      retq   
+  401203:   c3                      retq
 ```
 
 伪码如下
