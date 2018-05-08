@@ -369,7 +369,7 @@ for (int i = 0; i < 6; ++i) {
 }
 
 for (int i = 0; i < 6; ++i) {
-    if (input_num[i] <= i) {
+    if (input_num[i] <= 1) {
         cur = head;
     } else {
         cur = head;
