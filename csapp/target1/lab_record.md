@@ -763,11 +763,11 @@ g7      mov     rax, rdi                |
 &buf + 0x50:    | &g4    |
 &buf + 0x58:    | &g5    |
 &buf + 0x60:    | &g6    |
-&buf + 0x60:    | &g7    |
-&buf + 0x68:    | &touch3|
-&buf + 0x70:    | cookie |
-&buf + 0x78:    | \0     |       结束的 \0 不是必须的, 因为 Gets 会自动在末尾附加 \0
+&buf + 0x68:    | &g7    |
+&buf + 0x70:    | &touch3|
+&buf + 0x78:    | cookie |
+&buf + 0x80:    | \0     |       结束的 \0 不是必须的, 因为 Gets 会自动在末尾附加 \0
                 ----------
 ```
 
-最后说一下关于 `delta` 的计算, 在获取栈顶指针时(执行 g4), 此时 rsp 指向 g5, `&cookie - &cookie = 0x20`, 所以 `delta` 应该是 0x20.
+最后说一下关于 `delta` 的计算, 在获取栈顶指针时(执行 g4), 此时 rsp 指向 g5, `&cookie - &g5 = 0x20`, 所以 `delta` 应该是 0x20.
