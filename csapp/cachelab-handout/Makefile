@@ -5,7 +5,7 @@
 CC = gcc
 CFLAGS = -g -Wall -Werror -std=c99 -m64
 
-all: csim test-trans tracegen
+all: csim test-trans tracegen addr2sym
 	# Generate a handin tar file each time you compile
 	-tar -cvf ${USER}-handin.tar  csim.c trans.c 
 
@@ -20,6 +20,10 @@ tracegen: tracegen.c trans.o cachelab.c
 
 trans.o: trans.c
 	$(CC) $(CFLAGS) -O0 -c trans.c
+
+addr2sym: addr2sym.c
+	$(CC) $(CFLAGS) -O0 -o addr2sym addr2sym.c
+
 
 #
 # Clean the src dirctory

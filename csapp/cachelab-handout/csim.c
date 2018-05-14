@@ -6,7 +6,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <time.h>
+#include <limits.h>
 
 #define KEY_TYPE int64_t
 
@@ -269,7 +269,7 @@ struct Cache * newCache(int s, int E, int b) { // {{{
 bool setCache(struct Cache *cache, KEY_TYPE key,
         KEY_TYPE setIndex, KEY_TYPE tag) { // {{{
     int i;
-    int oldestTimeStamp = 2147483647;   // some big value here
+    int oldestTimeStamp = INT_MAX;
     int oldestLineIdx;
     /* int setIndex = key & setIndexMask; */
     /* int tag = key & tagMask; */
