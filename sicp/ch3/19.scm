@@ -1,0 +1,17 @@
+(define (list-walk step lst)
+  (cond ((null? lst)
+         '())
+        ((<= step 0)
+         lst)
+        (else
+          (list-walk (- step 1)
+                     (cdr lst)))))
+
+(define (contains-cycle? lst)
+  (define (iter x y)
+    (let ((slow (list-walk 1 x))
+          (fast (list-walk 2 y)))
+      (cond ((or (null? slow) (null? fast)) #f)
+            ((eq? slow fast) #t)
+            (else (iter slow fast)))))
+  (iter lst lst))

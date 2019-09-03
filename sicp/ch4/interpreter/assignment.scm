@@ -1,0 +1,16 @@
+(define (install-syntax-assignment eval-table)
+  (define eval (eval-table 'get 'eval))
+  (define set-variable-value! (eval-table 'get 'set-variable-value!))
+
+  (define (assignment-variable exp)
+    (cadr exp))
+  (define (assignment-value exp)
+    (caddr exp))
+
+  (define (eval-assignment exp env)
+    (set-variable-value! (assignment-variable exp)
+                         (eval (assignment-value exp) env)
+                         env)
+    'ok)
+  (eval-table 'put 'set! eval-assignment)
+  'done)

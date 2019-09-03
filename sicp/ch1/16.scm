@@ -1,0 +1,8 @@
+(define (expo-iter a b n)
+  (cond ((= n 0) a)
+        ((even? n) (expo-iter a (* b b) (/ n 2)))
+        (else (expo-iter (* a b) (* b b) (/ (- n 1) 2)))))
+(define (expo b exponent)
+  (define (even? num)
+    (= (remainder num 2) 0))
+  (expo-iter 1 b exponent))

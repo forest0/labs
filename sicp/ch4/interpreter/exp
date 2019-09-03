@@ -1,0 +1,4 @@
+./cond.scm:                  (sequence->exp (cond-actions first))
+./cond.scm:                       (sequence->exp (cond-actions first))
+./sequence.scm:  (define (sequence->exp seq)
+./sequence.scm:  (eval-table 'put 'sequence->exp sequence->exp)
