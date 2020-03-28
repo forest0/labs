@@ -361,7 +361,7 @@ class MnistClassifier(object):
 
         # it seems that usual preprocessing tricks has little effect on the
         # final performance of Mnist dataset, and take the fact that integer operations are much
-        # fater than floating point, we keep the data as it is.
+        # faster than floating point, we keep the data as it is.
         return X
 
     def predict(self, X):
