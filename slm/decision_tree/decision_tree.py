@@ -421,14 +421,14 @@ def model_test(model, test_data, test_label):
     return accuracy
 
 # env: i7-8700k
-# time: 19min20s
+# time: 1159s
 # memory: 4.2GB
 @timeit
 def main():
     train_data, train_label = load_minist('./mnist_train.csv')
     test_data, test_label = load_minist('./mnist_test.csv')
 
-    # this cost 139s
+    # this cost 149s
     classifier = MnistClassifierByDecisionTree(train_data,
             train_label,
             # it is ok that we keep dividing until a leaf node contains
@@ -441,11 +441,10 @@ def main():
     print('root left size:', classifier._tree.left_size)
     print('root right size:', classifier._tree.right_size)
 
-    # this cost 325s
+    # this cost 321s
     pruned_trees = classifier._get_pruned_trees()
     print('tree amount:', len(pruned_trees))
 
-    # this will cost about 693s
     # This should be done on cross-validation, but I'm lazy.
     for idx, tree in enumerate(pruned_trees):
         print('leaf node amount of current tree:', tree.leaf_node_amount)
