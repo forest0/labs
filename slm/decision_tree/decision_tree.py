@@ -432,7 +432,7 @@ def main():
     classifier = MnistClassifierByDecisionTree(train_data,
             train_label,
             # it is ok that we keep dividing until a leaf node contains
-            # only on sample, we will prune it later.
+            # only one sample, we will prune it later.
             min_samples_split=2,
             # honestly, I dont know how to choose gini_threshold
             # if dont use cross-validation.
