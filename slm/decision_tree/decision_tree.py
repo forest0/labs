@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
 
 import sys
-# namedtuple' defaults parameter requires python3.7
-if sys.version_info.major != 3 or sys.version_info.minor < 7:
-    print('at least python3.7 is required')
-    sys.exit(1)
-
 import numpy as np
 from functools import wraps, partial
 import time
 import pandas as pd
-from collections import namedtuple, deque
+from collections import deque
 
 import tracemalloc
 import linecache
