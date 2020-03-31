@@ -212,7 +212,7 @@ class MnistClassifierByDecisionTree(MnistClassifier):
         if gini < self._gini_threshold or \
                 Y.size < self._min_samples_split or \
                 len(available_features_idx) == 0:
-            return MnistClassifierByDecisionTree.Node(#id=self._node_id,
+            return MnistClassifierByDecisionTree.Node(
                     split_feature_idx=None, cls=cls,
                     parent=parent, single_node_gini=gini)
 
@@ -258,7 +258,6 @@ class MnistClassifierByDecisionTree(MnistClassifier):
         # we need pass parent to build_iter, so we create a leaf node first,
         # then update its children
         new_node = MnistClassifierByDecisionTree.Node(
-            #  id=self._node_id,
             split_feature_idx=split_feature_idx,
             cls=cls,
             single_node_gini=gini,
