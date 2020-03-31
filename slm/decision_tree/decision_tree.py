@@ -54,7 +54,7 @@ class MnistClassifier(object):
 class MnistClassifierByDecisionTree(MnistClassifier):
     '''A CART classification tree.'''
 
-    # we dnot use namedtuple here because we need modify it a lot.
+    # we dont use namedtuple here because we need modify it a lot.
     #  Node = namedtuple('Node',
     #          ['id', 'split_feature_idx', 'cls', 'parent',
     #              'single_node_gini', 'subtree_node_gini',
@@ -276,7 +276,7 @@ class MnistClassifierByDecisionTree(MnistClassifier):
         return new_node
 
     def _prune_tree(self, root):
-        '''Prune out just one interval node, returns the pruned tree,
+        '''Prune out just one internal node, returns the pruned tree,
         the passed-in root tree is NOT modified.
         '''
         def g_t_func(node):
@@ -435,8 +435,8 @@ def main():
             # it is ok that we keep dividing until a leaf node contains
             # only on sample, we will prune it later.
             min_samples_split=2,
-            # honestly, I dnot know how to choose gini_threshold
-            # if dnot use cross-validation.
+            # honestly, I dont know how to choose gini_threshold
+            # if dont use cross-validation.
             gini_threshold=0.04)
     print('root gini:', classifier._tree.single_node_gini)
     print('root left size:', classifier._tree.left_size)
