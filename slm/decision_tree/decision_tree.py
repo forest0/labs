@@ -288,7 +288,7 @@ class MnistClassifierByDecisionTree(MnistClassifier):
                     node.subtree_node_gini ) / (node.leaf_node_amount - 1)
 
         def get_min_g_t_node(root):
-            '''Returns the internal node that has the g(t) value.'''
+            '''Returns the internal node that has the minimal g(t) value.'''
             if not root or self._is_leaf(root):
                 return None
 
