@@ -315,14 +315,14 @@ class SVMBySMO(object):
         strategy = SVMBySMO.SelectFirstAlphaStrategy.Between0AndC
         while iter_cnt < max_iter:
 
-            first_alpha_indexes = list(self._select_first_alpha(strategy))
-            if not first_alpha_indexes and strategy == \
+            first_alpha_indexes = self._select_first_alpha(strategy)
+            if first_alpha_indexes.size == 0 and strategy == \
                         SVMBySMO.SelectFirstAlphaStrategy.EqualTo0:
                 logger.info('all points satisfy KKT, break')
                 break
 
             first_alpha_tried_idx = 0
-            first_alpha_len = len(first_alpha_indexes)
+            first_alpha_len = first_alpha_indexes.size
             second_alpha_seen = set()
             last_iter_has_progress = -2
             while first_alpha_tried_idx < first_alpha_len:
