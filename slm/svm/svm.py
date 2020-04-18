@@ -283,8 +283,9 @@ class SVMBySMO(object):
 
         eta = gram[i, i] + gram[j, j] - 2 * gram[i, j]
         if eta == 0:
-            # 0 cant be denominator
+            # the possibility of eta == 0 is low, we dont optimize it now
             logger.debug('eta == 0')
+            # 0 cant be denominator
             return False
 
         alphas[j] += Y[j] * (E[i] - E[j]) / eta
