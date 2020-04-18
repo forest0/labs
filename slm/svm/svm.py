@@ -174,31 +174,12 @@ class SVMBySMO(object):
         return indexes[negative_errors.argsort()]
 
     def _two_alpha_target_function_will_decrease_enough_on(self, i, j):
-        # TODO:
-        # how to check target function decrease enough,
-        # I checked the gradient but it seems large enough.
-        #
-        # This function always return True now.
-        '''We judge if alpha_i and alpha_j will lead two alpha's target function
-        decrease enough by gradient.
-        '''
         E = self._errors
-        Y = self._Y
-        alphas = self._alphas
-        gram = self._gram
 
-        v1 = E[i] + Y[i] - self._b - alphas[i] * Y[i] * gram[i, i] - \
-                alphas[j] * Y[j] * gram[i, j]
-        v2 = E[j] + Y[j] - self._b - alphas[i] * Y[i] * gram[i ,j] - \
-                alphas[j] * Y[j] * gram[j, j]
-        var_sigma = alphas[i] * Y[i] + alphas[j] * Y[j]
+        abs_delta_error = abs(E[i] - E[j])
+        logger.debug('|Ei-Ej| = %f', abs_delta_error)
 
-        gradient = alphas[j] * (gram[i, i] + gram[j, j] - 2 * gram[i, j]) - \
-                Y[j] * (var_sigma * (gram[i, i] + gram[i, j]) + Y[i] - Y[j] - v1 + v2)
-        logger.debug('gradient is %f', gradient)
-
-        #  return gradient > 0
-        return True
+        return abs_delta_error > 1e-5
 
     def _select_second_alpha(self, first_alpha_idx, second_alpha_seen):
         def valid(first_alpha_idx, second_alpha_idx):
