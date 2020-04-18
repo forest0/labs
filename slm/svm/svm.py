@@ -194,6 +194,8 @@ class SVMBySMO(object):
         alphas = self._alphas
         C = self._C
 
+        # TODO: acceleration trick
+        # maybe a proper data structure to cache E?
         if E[first_alpha_idx] > 0: # we want small E2 to maximum |E1 - E2|
             # we need two smallest errors, in case the smallest is E1
             indexes = E.argpartition(1)[:2]
