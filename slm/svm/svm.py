@@ -11,6 +11,9 @@ import logging
 from enum import Enum
 from scipy.spatial.distance import pdist, squareform
 
+logger = logging.getLogger('svm')
+logger.setLevel(logging.WARNING)
+
 # some core functions will be timed if you set this to be True.
 enable_timing_function = True
 def timeit(func=None, *, prefix=""):
@@ -192,7 +195,7 @@ class SVMBySMO(object):
 
         gradient = alphas[j] * (gram[i, i] + gram[j, j] - 2 * gram[i, j]) - \
                 Y[j] * (var_sigma * (gram[i, i] + gram[i, j]) + Y[i] - Y[j] - v1 + v2)
-        logging.info('gradient is %f', gradient)
+        logger.debug('gradient is %f', gradient)
 
         #  return gradient > 0
         return True
@@ -258,7 +261,7 @@ class SVMBySMO(object):
                 self._gram[idx]
 
     def _solve_two_alpha(self, i, j):
-        logging.info('trying to solve on (%d,%d)', i, j)
+        logger.debug('trying to solve on (%d,%d)', i, j)
         gram = self._gram
         alphas = self._alphas
         Y = self._Y
@@ -275,13 +278,13 @@ class SVMBySMO(object):
             H = min(C, C + alpha_j_old - alpha_i_old)
         if L == H:
             # only one possible solution
-            logging.info('L == H')
+            logger.debug('L == H')
             return False
 
         eta = gram[i, i] + gram[j, j] - 2 * gram[i, j]
         if eta == 0:
             # 0 cant be denominator
-            logging.info('eta == 0')
+            logger.debug('eta == 0')
             return False
 
         alphas[j] += Y[j] * (E[i] - E[j]) / eta
@@ -303,7 +306,7 @@ class SVMBySMO(object):
         elif 0 < alphas[j] < C: self._b = b2
         else: self._b = (b1 + b2) / 2
 
-        logging.info('succeed to solve on (%d,%d)', i, j)
+        logger.debug('succeed to solve on (%d,%d)', i, j)
         return True
 
     @timeit
@@ -315,7 +318,7 @@ class SVMBySMO(object):
             first_alpha_indexes = list(self._select_first_alpha(strategy))
             if not first_alpha_indexes and strategy == \
                         SVMBySMO.SelectFirstAlphaStrategy.EqualTo0:
-                logging.info('all points satisfy KKT, break')
+                logger.info('all points satisfy KKT, break')
                 break
 
             first_alpha_tried_idx = 0
@@ -352,13 +355,13 @@ class SVMBySMO(object):
             # reset default strategy that is most promising
             strategy = SVMBySMO.SelectFirstAlphaStrategy.Between0AndC
 
-            logging.info('iter %d: done', iter_cnt+1)
+            logger.debug('iter %d: done', iter_cnt+1)
 
             if iter_cnt - last_iter_has_progress > 1:
                 if iter_cnt == 0:
-                    logging.warning('no progress at the first iteration, break')
+                    logger.warning('no progress at the first iteration, break')
                 else:
-                    logging.info('no progress after 2 iterations, break')
+                    logger.info('no progress after 2 iterations, break')
                 break
 
             iter_cnt += 1
@@ -538,9 +541,19 @@ def main():
     test_accuracy_on_nonlinear_separable(C=100, epsilon=1e-4,
         kernel=('Gaussian', 1.3), max_iter=20000)
 
+def configure_logger():
+    logger.setLevel(logging.INFO)
+
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+
+    formatter = logging.Formatter(
+            '%(name)s -- [%(levelname)s] %(funcName)s:%(lineno)d %(message)s')
+
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.FATAL,
-        format='[%(levelname)s] %(funcName)s:%(lineno)d %(message)s'
-    )
+    configure_logger()
+
     main()
