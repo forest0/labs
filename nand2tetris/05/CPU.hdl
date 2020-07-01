@@ -1,0 +1,113 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/05/CPU.hdl
+
+/**
+ * The Hack CPU (Central Processing unit), consisting of an ALU,
+ * two registers named A and D, and a program counter named PC.
+ * The CPU is designed to fetch and execute instructions written in
+ * the Hack machine language. In particular, functions as follows:
+ * Executes the inputted instruction according to the Hack machine
+ * language specification. The D and A in the language specification
+ * refer to CPU-resident registers, while M refers to the external
+ * memory location addressed by A, i.e. to Memory[A]. The inM input
+ * holds the value of this location. If the current instruction needs
+ * to write a value to M, the value is placed in outM, the address
+ * of the target location is placed in the addressM output, and the
+ * writeM control bit is asserted. (When writeM==0, any value may
+ * appear in outM). The outM and writeM outputs are combinational:
+ * they are affected instantaneously by the execution of the current
+ * instruction. The addressM and pc outputs are clocked: although they
+ * are affected by the execution of the current instruction, they commit
+ * to their new values only in the next time step. If reset==1 then the
+ * CPU jumps to address 0 (i.e. pc is set to 0 in next time step) rather
+ * than to the address resulting from executing the current instruction.
+ */
+
+CHIP CPU {
+
+    IN  inM[16],         // M value input  (M = contents of RAM[A])
+        instruction[16], // Instruction for execution
+        reset;           // Signals whether to re-start the current
+                         // program (reset==1) or continue executing
+                         // the current program (reset==0).
+
+    OUT outM[16],        // M value output
+        writeM,          // Write to M?
+        addressM[15],    // Address in data memory (of M)
+        pc[15];          // address of next instruction
+
+    PARTS:
+    //////////////////////////////////////////////////////////////////////
+    // control logic begins
+    //////////////////////////////////////////////////////////////////////
+
+    // choose register A's input
+    // is C-instruction and need to store to A(d1, instruction[5])
+    And(a=instruction[15], b=instruction[5], out=isStoreOutALUToRegisterA);
+
+    // choose o2's input
+    // is C-instruction and a and not c3
+    And(a=instruction[15], b=instruction[12], out=o3);
+    Not(in=instruction[9], out=o4);
+    And(a=o3, b=o4, out=isInputM);
+
+    // whether store to A
+    // is A-instruction or need to store to A(d1, instruction[5])
+    Not(in=instruction[15], out=isAInstruction);
+    Or(a=isAInstruction, b=isStoreOutALUToRegisterA, out=isStoreToRegisterA);
+
+    // whether store to D
+    // is C-instruction and need to store to M(d2, instruction[4])
+    And(a=instruction[15], b=instruction[4], out=isStoreOutALUToRegisterD);
+
+    // whether store to M
+    // is C-instruction and need to store to D(d3, instruction[3])
+    And(a=instruction[15], b=instruction[3], out=writeM);
+
+    // check the sign of ALU's output, then decide we need jump or not
+    Or(a=isOutALUZero, b=isOutALUNegative, out=isOutALUZeroOrNegative);
+    Not(in=isOutALUZeroOrNegative, out=isOutALUPositive);
+
+    // whether load PC
+    // is C-instruction and need jump
+    // need jump means(3 possible situations, any one holds, we jump):
+    //      a. outALU < 0 and j1 set
+    //      b. outALU = 0 and j2 set
+    //      c. outALU > 0 and j3 set
+    And(a=isOutALUNegative, b=instruction[2], out=isJumpNegative); // a
+    And(a=isOutALUZero, b=instruction[1], out=isJumpZero); // b
+    And(a=isOutALUPositive, b=instruction[0], out=isJumpPositive); // c
+    Or(a=isJumpNegative, b=isJumpZero, out=o5);
+    Or(a=o5, b=isJumpPositive, out=isJump);
+    And(a=instruction[15], b=isJump, out=isLoadPC);
+    // not load PC implies increase PC
+    Not(in=isLoadPC, out=isIncreasePC);
+
+    //////////////////////////////////////////////////////////////////////
+    // control logic end
+    //////////////////////////////////////////////////////////////////////
+
+
+    Mux16(a=instruction, b=outALU, sel=isStoreOutALUToRegisterA, out=o1);
+
+    ARegister(in=o1, load=isStoreToRegisterA, out=outA, out[0..14]=addressM);
+
+    Mux16(a=outA, b=inM, sel=isInputM, out=o2);
+
+    DRegister(in=outALU, load=isStoreOutALUToRegisterD, out=outD);
+
+    ALU(x=outD, y=o2,
+        zx=instruction[11], nx=instruction[10],
+        zy=instruction[9], ny=instruction[8],
+        f=instruction[7],
+        no=instruction[6],
+
+        out=outALU,
+        out=outM,
+        zr=isOutALUZero,
+        ng=isOutALUNegative
+    );
+    PC(in=outA, load=isLoadPC, inc=isIncreasePC, reset=reset, out[0..14]=pc);
+}
