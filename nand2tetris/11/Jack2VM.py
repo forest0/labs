@@ -764,10 +764,6 @@ class CompileEngine(object):
     def _translate_class_var(self, identifier_name, type, kind):
         symbol = self._symbol_table.add(identifier_name, type, kind)
 
-        if kind == 'static':
-            self._code_writer.push(VMSpecification.SegmentType.CONSTANT, 0)
-            self._write_variable(symbol)
-
     def _compile_class_var_dec(self):
         kind_token = self._expect_tokens([Token(TokenType.KEYWORD, 'static'),
                                           Token(TokenType.KEYWORD, 'field')])
